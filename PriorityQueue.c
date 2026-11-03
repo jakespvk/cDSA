@@ -135,8 +135,17 @@ PriorityQueueInitResult PriorityQueue_Init(Allocator allocator, usize limit)
 
     result.pq = (PriorityQueue *)allocResult.memory;
 
+    ArrayListInitResult arrayListResult = ArrayList_Init(allocator);
+    if (arrayListResult.result == FAILURE)
+    {
+        // panic
+        result.result = FAILURE;
+        result.pq = 0;
+        return result;
+    }
+
     result.pq->limit = limit;
-    result.pq->items = ArrayList_Init(allocator);
+    result.pq->items = arrayListResult.list;
 
     result.result = SUCCESS;
     return result;
@@ -179,12 +188,22 @@ int main(void)
     u8 *buf = VirtualAlloc(0, BUFFER_SIZE, MEM_COMMIT, PAGE_READWRITE);
     Allocator allocator = {.capacity = BUFFER_SIZE, .used = 0, .memory = buf};
 
-    ArrayList *arrayList = ArrayList_Init(allocator);
+    ArrayListInitResult arrayListResult = ArrayList_Init(allocator);
+    ArrayList *list;
+    if (arrayListResult.result == FAILURE)
+    {
+        // log error
+        printf("there was an error init arraylist\n");
+    }
+    else
+    {
+        list = arrayListResult.list;
+    }
 
-    ArrayList_Add(allocator, arrayList, 3);
+    ArrayList_Add(allocator, list, 3);
 
     printf("Hello, world!\n");
-    printf("%d\n", arrayList->items[0]);
+    printf("%d\n", list->items[0]);
 
     if (!VirtualFree(buf, 4096, MEM_RELEASE))
     {
