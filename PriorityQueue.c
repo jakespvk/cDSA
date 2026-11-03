@@ -26,8 +26,8 @@ typedef union {
 
 typedef struct
 {
-    Result result;
     u8 *memory;
+    Result result;
 } AllocationResult;
 
 typedef struct
