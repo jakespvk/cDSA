@@ -111,11 +111,11 @@ typedef struct
     ArrayList items;
 } PriorityQueue;
 
-Result PriorityQueue_Push(Allocator allocator, PriorityQueue pq, u8 item)
+Result PriorityQueue_Push(Allocator allocator, PriorityQueue *pq, u8 item)
 {
-    if (pq.items.len == pq.limit)
+    if (pq->items.len == pq->limit)
     {
-        if (pq.items[pq.items.len] < item)
+        if (pq->items.items[pq->items.len] < item)
         {
         }
         // rank and replace or drop
