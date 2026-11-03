@@ -1,9 +1,8 @@
+#include <iso646.h>
 #include <malloc.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <windows.h>
-
-typedef unsigned char u1;
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -19,9 +18,10 @@ typedef int64_t isize;
 
 static usize BUFFER_SIZE = 4096;
 
-typedef union {
-    u1 Success;
-    u1 Failure;
+typedef enum
+{
+    FAILURE = 0,
+    SUCCESS = 1
 } Result;
 
 typedef struct
@@ -49,16 +49,16 @@ AllocationResult Allocate(Allocator allocator, usize size)
     u8 *chunk = allocator.memory + allocator.used;
     allocator.used += size;
 
-    AllocationResult result = {.result = {.Success = 1}, .memory = chunk};
+    AllocationResult result = {.result = SUCCESS, .memory = chunk};
     return result;
 }
 
 ArrayList *ArrayList_Init(Allocator allocator)
 {
     AllocationResult allocResult = Allocate(allocator, sizeof(ArrayList) + 10);
-    if (!allocResult.result.Success)
+    if (allocResult.result != SUCCESS)
     {
-        Result result = {.Failure = 1};
+        return FAILURE;
         // panic
     }
 
@@ -73,10 +73,9 @@ ArrayList *ArrayList_Init(Allocator allocator)
 Result ArrayList_Resize(Allocator allocator, ArrayList *al)
 {
     AllocationResult allocResult = Allocate(allocator, al->capacity * 2);
-    if (!allocResult.result.Success)
+    if (allocResult.result != SUCCESS)
     {
-        Result result = {.Failure = 1};
-        return result;
+        return FAILURE;
     }
 
     for (usize i = 0; i < al->len; i++)
@@ -87,8 +86,7 @@ Result ArrayList_Resize(Allocator allocator, ArrayList *al)
     al->items = allocResult.memory;
     al->capacity *= 2;
 
-    Result result = {.Success = 1};
-    return result;
+    return SUCCESS;
 }
 
 Result ArrayList_Add(Allocator allocator, ArrayList *al, u8 item)
@@ -101,8 +99,7 @@ Result ArrayList_Add(Allocator allocator, ArrayList *al, u8 item)
     al->items[al->len] = item;
     al->len++;
 
-    Result result = {.Success = 1};
-    return result;
+    return SUCCESS;
 }
 
 typedef struct
@@ -123,8 +120,7 @@ Result PriorityQueue_Push(Allocator allocator, PriorityQueue *pq, u8 item)
 
     // sort/rank and insert
 
-    Result result = {.Success = 1};
-    return result;
+    return SUCCESS;
 }
 
 int main(void)
