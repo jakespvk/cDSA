@@ -1,5 +1,3 @@
-#include <iso646.h>
-#include <malloc.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <windows.h>
@@ -49,17 +47,17 @@ AllocationResult Allocate(Allocator allocator, usize size)
     u8 *chunk = allocator.memory + allocator.used;
     allocator.used += size;
 
-    AllocationResult result = {.result = SUCCESS, .memory = chunk};
+    AllocationResult result = {.memory = chunk, .result = SUCCESS};
     return result;
 }
 
 ArrayList *ArrayList_Init(Allocator allocator)
 {
     AllocationResult allocResult = Allocate(allocator, sizeof(ArrayList) + 10);
-    if (allocResult.result != SUCCESS)
+    if (allocResult.result == FAILURE)
     {
-        return FAILURE;
         // panic
+        return FAILURE;
     }
 
     ArrayList *arrayList = (ArrayList *)allocResult.memory;
@@ -73,7 +71,7 @@ ArrayList *ArrayList_Init(Allocator allocator)
 Result ArrayList_Resize(Allocator allocator, ArrayList *al)
 {
     AllocationResult allocResult = Allocate(allocator, al->capacity * 2);
-    if (allocResult.result != SUCCESS)
+    if (allocResult.result == FAILURE)
     {
         return FAILURE;
     }
@@ -112,13 +110,30 @@ Result PriorityQueue_Push(Allocator allocator, PriorityQueue *pq, u8 item)
 {
     if (pq->items.len == pq->limit)
     {
-        if (pq->items.items[pq->items.len] < item)
-        {
-        }
         // rank and replace or drop
+        if (pq->items.items[pq->items.len] > item)
+        {
+            return SUCCESS;
+        }
+        // this "drop through" should properly shift queue so that the lowest-rated entry
+        // falls past the limit and is effectively discarded. see update in additional comment*
     }
 
     // sort/rank and insert
+    for (usize i = pq->items.len; i > 0; i--)
+    {
+        if (item > pq->items.items[i])
+        {
+            // *additional comment: this exact condition should ensure this behavior occurs
+            // safely and actually just overwrites last element instead of shifting it "out"
+            if (i + 1 < pq->items.capacity)
+            {
+                pq->items.items[i + 1] = pq->items.items[i];
+            }
+        }
+
+        pq->items.items[i] = item;
+    }
 
     return SUCCESS;
 }
