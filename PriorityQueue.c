@@ -51,21 +51,30 @@ AllocationResult Allocate(Allocator allocator, usize size)
     return result;
 }
 
-ArrayList *ArrayList_Init(Allocator allocator)
+typedef struct
 {
+    Result result;
+    ArrayList *list;
+} ArrayListInitResult;
+
+ArrayListInitResult ArrayList_Init(Allocator allocator)
+{
+    ArrayListInitResult result;
     AllocationResult allocResult = Allocate(allocator, sizeof(ArrayList) + 10);
     if (allocResult.result == FAILURE)
     {
         // panic
-        return FAILURE;
+        result.result = FAILURE;
+        result.list = 0;
+        return result;
     }
 
-    ArrayList *arrayList = (ArrayList *)allocResult.memory;
-    arrayList->capacity = 10;
-    arrayList->len = 0;
-    arrayList->items = allocResult.memory + sizeof(ArrayList);
+    result.list = (ArrayList *)allocResult.memory;
+    result.list->capacity = 10;
+    result.list->len = 0;
+    result.list->items = allocResult.memory + sizeof(ArrayList);
 
-    return arrayList;
+    return result;
 }
 
 Result ArrayList_Resize(Allocator allocator, ArrayList *al)
@@ -103,36 +112,63 @@ Result ArrayList_Add(Allocator allocator, ArrayList *al, u8 item)
 typedef struct
 {
     usize limit;
-    ArrayList items;
+    ArrayList *items;
 } PriorityQueue;
+
+typedef struct
+{
+    PriorityQueue *pq;
+    Result result;
+} PriorityQueueInitResult;
+
+PriorityQueueInitResult PriorityQueue_Init(Allocator allocator, usize limit)
+{
+    PriorityQueueInitResult result;
+    AllocationResult allocResult = Allocate(allocator, sizeof(PriorityQueue) + limit);
+    if (allocResult.result == FAILURE)
+    {
+        // panic
+        result.result = FAILURE;
+        result.pq = 0;
+        return result;
+    }
+
+    result.pq = (PriorityQueue *)allocResult.memory;
+
+    result.pq->limit = limit;
+    result.pq->items = ArrayList_Init(allocator);
+
+    result.result = SUCCESS;
+    return result;
+}
 
 Result PriorityQueue_Push(Allocator allocator, PriorityQueue *pq, u8 item)
 {
-    if (pq->items.len == pq->limit)
+    if (pq->items->len == pq->limit)
     {
         // rank and replace or drop
-        if (pq->items.items[pq->items.len] > item)
+        if (pq->items->items[pq->items->len] > item)
         {
             return SUCCESS;
         }
         // this "drop through" should properly shift queue so that the lowest-rated entry
-        // falls past the limit and is effectively discarded. see update in additional comment*
+        // falls past the limit and is effectively discarded-> see update in additional comment*
     }
 
     // sort/rank and insert
-    for (usize i = pq->items.len; i > 0; i--)
+    for (usize i = pq->items->len; i > 0; i--)
     {
-        if (item > pq->items.items[i])
+        if (item > pq->items->items[i])
         {
             // *additional comment: this exact condition should ensure this behavior occurs
             // safely and actually just overwrites last element instead of shifting it "out"
-            if (i + 1 < pq->items.capacity)
+            if (i + 1 < pq->items->capacity)
             {
-                pq->items.items[i + 1] = pq->items.items[i];
+                pq->items->items[i + 1] = pq->items->items[i];
             }
         }
 
-        pq->items.items[i] = item;
+        pq->items->items[i] = item;
     }
 
     return SUCCESS;
