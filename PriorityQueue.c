@@ -42,10 +42,10 @@ typedef struct
     u8 *items;
 } ArrayList;
 
-AllocationResult Allocate(Allocator allocator, usize size)
+AllocationResult Allocate(Allocator *allocator, usize size)
 {
-    u8 *chunk = allocator.memory + allocator.used;
-    allocator.used += size;
+    u8 *chunk = allocator->memory + allocator->used;
+    allocator->used += size;
 
     AllocationResult result = {.memory = chunk, .result = SUCCESS};
     return result;
@@ -57,7 +57,7 @@ typedef struct
     ArrayList *list;
 } ArrayListInitResult;
 
-ArrayListInitResult ArrayList_Init(Allocator allocator)
+ArrayListInitResult ArrayList_Init(Allocator *allocator)
 {
     ArrayListInitResult result;
     AllocationResult allocResult = Allocate(allocator, sizeof(ArrayList) + 10);
@@ -77,7 +77,7 @@ ArrayListInitResult ArrayList_Init(Allocator allocator)
     return result;
 }
 
-Result ArrayList_Resize(Allocator allocator, ArrayList *al)
+Result ArrayList_Resize(Allocator *allocator, ArrayList *al)
 {
     AllocationResult allocResult = Allocate(allocator, al->capacity * 2);
     if (allocResult.result == FAILURE)
@@ -96,17 +96,22 @@ Result ArrayList_Resize(Allocator allocator, ArrayList *al)
     return SUCCESS;
 }
 
-Result ArrayList_Add(Allocator allocator, ArrayList *al, u8 item)
+Result ArrayList_Insert(Allocator *allocator, ArrayList *al, u8 item, usize idx)
 {
     if (al->len + 1 > al->capacity)
     {
         ArrayList_Resize(allocator, al);
     }
 
-    al->items[al->len] = item;
+    al->items[idx] = item;
     al->len++;
 
     return SUCCESS;
+}
+
+Result ArrayList_Add(Allocator *allocator, ArrayList *al, u8 item)
+{
+    return ArrayList_Insert(allocator, al, item, al->len);
 }
 
 typedef struct
@@ -121,7 +126,7 @@ typedef struct
     Result result;
 } PriorityQueueInitResult;
 
-PriorityQueueInitResult PriorityQueue_Init(Allocator allocator, usize limit)
+PriorityQueueInitResult PriorityQueue_Init(Allocator *allocator, usize limit)
 {
     PriorityQueueInitResult result;
     AllocationResult allocResult = Allocate(allocator, sizeof(PriorityQueue) + limit);
@@ -146,12 +151,20 @@ PriorityQueueInitResult PriorityQueue_Init(Allocator allocator, usize limit)
 
     result.pq->limit = limit;
     result.pq->items = arrayListResult.list;
+    // result.pq->items->items = arrayListResult.list->items;
+    // result.pq->items->capacity = arrayListResult.list->capacity;
+    // result.pq->items->len = arrayListResult.list->len;
 
     result.result = SUCCESS;
     return result;
 }
 
-Result PriorityQueue_Push(Allocator allocator, PriorityQueue *pq, u8 item)
+boolean less_than(PriorityQueue *pq, usize current_item_idx, u8 item)
+{
+    return pq->items->items[current_item_idx] < item;
+}
+
+Result PriorityQueue_Push(Allocator *allocator, PriorityQueue *pq, u8 item)
 {
     if (pq->items->len == pq->limit)
     {
@@ -165,6 +178,19 @@ Result PriorityQueue_Push(Allocator allocator, PriorityQueue *pq, u8 item)
     }
 
     // sort/rank and insert
+    usize current_item_idx = pq->items->len;
+    while (less_than(pq, current_item_idx, item) && current_item_idx > 0)
+    {
+        current_item_idx--;
+    }
+
+    if (current_item_idx == pq->items->len)
+    {
+        return SUCCESS;
+    }
+
+    ArrayList_Insert(allocator, pq->items, current_item_idx);
+
     for (usize i = pq->items->len; i > 0; i--)
     {
         if (item > pq->items->items[i])
@@ -183,12 +209,18 @@ Result PriorityQueue_Push(Allocator allocator, PriorityQueue *pq, u8 item)
     return SUCCESS;
 }
 
+u8 PriorityQueue_Peek(PriorityQueue *pq)
+{
+    // bounds check
+    return pq->items->items[0];
+}
+
 int main(void)
 {
     u8 *buf = VirtualAlloc(0, BUFFER_SIZE, MEM_COMMIT, PAGE_READWRITE);
     Allocator allocator = {.capacity = BUFFER_SIZE, .used = 0, .memory = buf};
 
-    ArrayListInitResult arrayListResult = ArrayList_Init(allocator);
+    ArrayListInitResult arrayListResult = ArrayList_Init(&allocator);
     ArrayList *list;
     if (arrayListResult.result == FAILURE)
     {
@@ -200,10 +232,25 @@ int main(void)
         list = arrayListResult.list;
     }
 
-    ArrayList_Add(allocator, list, 3);
+    ArrayList_Add(&allocator, list, 3);
+
+    PriorityQueueInitResult pqResult = PriorityQueue_Init(&allocator, 8);
+    PriorityQueue *pq;
+    if (pqResult.result == FAILURE)
+    {
+        // log error
+        printf("there was an error init priorityqueue\n");
+    }
+    else
+    {
+        pq = pqResult.pq;
+    }
+
+    PriorityQueue_Push(&allocator, pq, 3);
 
     printf("Hello, world!\n");
-    printf("%d\n", list->items[0]);
+    printf("List item: %d\n", list->items[0]);
+    printf("Queue item: %d\n", PriorityQueue_Peek(pq));
 
     if (!VirtualFree(buf, 4096, MEM_RELEASE))
     {
