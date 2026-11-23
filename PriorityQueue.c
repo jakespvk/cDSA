@@ -159,7 +159,7 @@ PriorityQueueInitResult PriorityQueue_Init(Allocator *allocator, usize limit)
     return result;
 }
 
-boolean less_than(PriorityQueue *pq, usize current_item_idx, u8 item)
+boolean less_than_with_lookup(PriorityQueue *pq, usize current_item_idx, u8 item)
 {
     return pq->items->items[current_item_idx] < item;
 }
@@ -179,14 +179,14 @@ Result PriorityQueue_Push(Allocator *allocator, PriorityQueue *pq, u8 item)
 
     // sort/rank and insert
     usize current_item_idx = pq->items->len;
-    while (less_than(pq, current_item_idx, item) && current_item_idx > 0)
+    while (less_than_with_lookup(pq, current_item_idx, item) && current_item_idx > 0)
     {
         current_item_idx--;
     }
 
     if (current_item_idx == pq->items->len)
     {
-        if (less_than(pq, pq->items->items[current_item_idx], item))
+        if (less_than_with_lookup(pq, current_item_idx, item))
         {
             pq->items->items[current_item_idx] = item;
         }
