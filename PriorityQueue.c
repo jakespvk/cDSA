@@ -186,25 +186,16 @@ Result PriorityQueue_Push(Allocator *allocator, PriorityQueue *pq, u8 item)
 
     if (current_item_idx == pq->items->len)
     {
+        if (less_than(pq, pq->items->items[current_item_idx], item))
+        {
+            pq->items->items[current_item_idx] = item;
+        }
+
         return SUCCESS;
     }
 
-    ArrayList_Insert(allocator, pq->items, current_item_idx);
-
-    for (usize i = pq->items->len; i > 0; i--)
-    {
-        if (item > pq->items->items[i])
-        {
-            // *additional comment: this exact condition should ensure this behavior occurs
-            // safely and actually just overwrites last element instead of shifting it "out"
-            if (i + 1 < pq->items->capacity)
-            {
-                pq->items->items[i + 1] = pq->items->items[i];
-            }
-        }
-
-        pq->items->items[i] = item;
-    }
+    ArrayList_Insert(allocator, pq->items, item, current_item_idx);
+    pq->items->len--;
 
     return SUCCESS;
 }
@@ -247,6 +238,9 @@ int main(void)
     }
 
     PriorityQueue_Push(&allocator, pq, 3);
+    PriorityQueue_Push(&allocator, pq, 5);
+    PriorityQueue_Push(&allocator, pq, 8);
+    PriorityQueue_Push(&allocator, pq, 1);
 
     printf("Hello, world!\n");
     printf("List item: %d\n", list->items[0]);
