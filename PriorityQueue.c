@@ -104,7 +104,7 @@ Result ArrayList_Insert(Allocator *allocator, ArrayList *al, u8 item, usize idx)
     }
 
     al->items[idx] = item;
-    al->len++;
+    al->len += 1;
 
     return SUCCESS;
 }
@@ -169,36 +169,18 @@ PriorityQueueInitResult PriorityQueue_Init(Allocator *allocator, usize limit)
 
 Result PriorityQueue_Push(Allocator *allocator, PriorityQueue *pq, u8 item)
 {
-    if (pq->items->len == pq->limit)
-    {
-        // rank and replace or drop
-        if (pq->items->items[pq->items->len] > item)
-        {
-            return SUCCESS;
-        }
-        // this "drop through" should properly shift queue so that the lowest-rated entry
-        // falls past the limit and is effectively discarded-> see update in additional comment*
-    }
-
-    // sort/rank and insert
     usize current_item_idx = pq->items->len;
     while (current_item_idx > 0 && ArrayList_GetItemAt(pq->items, current_item_idx) < item)
     {
         current_item_idx--;
     }
 
-    if (current_item_idx == pq->items->len)
-    {
-        if (ArrayList_GetItemAt(pq->items, current_item_idx) < item)
-        {
-            pq->items->items[current_item_idx] = item;
-        }
-
-        return SUCCESS;
-    }
-
     ArrayList_Insert(allocator, pq->items, item, current_item_idx);
-    pq->items->len--;
+
+    if (pq->items->len > pq->limit)
+    {
+        pq->items->len -= 1;
+    }
 
     return SUCCESS;
 }
@@ -228,12 +210,12 @@ int main(void)
 
     ArrayList_Add(&allocator, list, 3);
 
-    PriorityQueueInitResult pqResult = PriorityQueue_Init(&allocator, 8);
+    PriorityQueueInitResult pqResult = PriorityQueue_Init(&allocator, 4);
     PriorityQueue *pq;
     if (pqResult.result == FAILURE)
     {
         // log error
-        printf("there was an error init priorityqueue\n");
+        printf("there was an error init'ing priorityqueue\n");
     }
     else
     {
@@ -247,7 +229,15 @@ int main(void)
 
     printf("Hello, world!\n");
     printf("List item: %d\n", list->items[0]);
-    printf("Queue item: %d\n", PriorityQueue_Peek(pq));
+    printf("List len: %zu\n", list->len);
+    printf("Queue peek: %d\n", PriorityQueue_Peek(pq));
+
+    PriorityQueue_Push(&allocator, pq, 10);
+
+    printf("Added 10 to pq\n");
+    printf("Queue peek: %d\n", PriorityQueue_Peek(pq));
+
+    printf("PQ len: %zu, PQ cap: %zu, PQ limit: %zu\n", pq->items->len, pq->items->capacity, pq->limit);
 
     if (!VirtualFree(buf, 4096, MEM_RELEASE))
     {
