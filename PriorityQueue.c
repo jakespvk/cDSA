@@ -114,6 +114,14 @@ Result ArrayList_Add(Allocator *allocator, ArrayList *al, u8 item)
     return ArrayList_Insert(allocator, al, item, al->len);
 }
 
+u8 ArrayList_GetItemAt(ArrayList *al, usize idx)
+{
+    u8 ret_item;
+    ret_item = al->items[idx];
+
+    return ret_item;
+}
+
 typedef struct
 {
     usize limit;
@@ -159,11 +167,6 @@ PriorityQueueInitResult PriorityQueue_Init(Allocator *allocator, usize limit)
     return result;
 }
 
-boolean less_than_with_lookup(PriorityQueue *pq, usize current_item_idx, u8 item)
-{
-    return pq->items->items[current_item_idx] < item;
-}
-
 Result PriorityQueue_Push(Allocator *allocator, PriorityQueue *pq, u8 item)
 {
     if (pq->items->len == pq->limit)
@@ -179,14 +182,14 @@ Result PriorityQueue_Push(Allocator *allocator, PriorityQueue *pq, u8 item)
 
     // sort/rank and insert
     usize current_item_idx = pq->items->len;
-    while (less_than_with_lookup(pq, current_item_idx, item) && current_item_idx > 0)
+    while (current_item_idx > 0 && ArrayList_GetItemAt(pq->items, current_item_idx) < item)
     {
         current_item_idx--;
     }
 
     if (current_item_idx == pq->items->len)
     {
-        if (less_than_with_lookup(pq, current_item_idx, item))
+        if (ArrayList_GetItemAt(pq->items, current_item_idx) < item)
         {
             pq->items->items[current_item_idx] = item;
         }
