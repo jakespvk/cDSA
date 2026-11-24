@@ -159,9 +159,6 @@ PriorityQueueInitResult PriorityQueue_Init(Allocator *allocator, usize limit)
 
     result.pq->limit = limit;
     result.pq->items = arrayListResult.list;
-    // result.pq->items->items = arrayListResult.list->items;
-    // result.pq->items->capacity = arrayListResult.list->capacity;
-    // result.pq->items->len = arrayListResult.list->len;
 
     result.result = SUCCESS;
     return result;
